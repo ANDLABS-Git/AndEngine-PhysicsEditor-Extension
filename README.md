@@ -18,9 +18,9 @@ final PhysicsEditorLoader loader = new PhysicsEditorLoader();
       true, // whether the physics definition's position should be updated or not
       true // whether the physics definition's rotation should be updated or not
       );
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 ```
 When loading multiple definitions, call
 ```java
