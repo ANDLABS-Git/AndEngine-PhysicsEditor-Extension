@@ -9,18 +9,18 @@ Use it like this:
 3. Use the PhysicsEditorLoader like so:
 ```java
 final PhysicsEditorLoader loader = new PhysicsEditorLoader();
-  	try {
-			loader.load(this, // the context
-      mPhysicsWorld, // an already initialized physical world
-      "xml/", // the base path to your xml files
-      "your_def.xml", // the AndEngine exporter XML of your body or bodies
-      yourShape, // the IAreaShape the physics definition will be attached to
-      true, // whether the physics definition's position should be updated or not
-      true // whether the physics definition's rotation should be updated or not
-      );
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+try {
+    loader.load(this, // the context
+        mPhysicsWorld, // an already initialized physical world
+        "xml/", // the base path to your xml files
+        "your_def.xml", // the AndEngine exporter XML of your body or bodies
+        yourShape, // the IAreaShape the physics definition will be attached to
+        true, // whether the physics definition's position should be updated or not
+        true // whether the physics definition's rotation should be updated or not
+        );
+} catch (IOException e) {
+    e.printStackTrace();
+}
 ```
 When loading multiple definitions, call
 ```java
