@@ -16,7 +16,7 @@ final PhysicsEditorLoader loader = new PhysicsEditorLoader();
       "your_def.xml", // the AndEngine exporter XML of your body or bodies
       yourShape, // the IAreaShape the physics definition will be attached to
       true, // whether the physics definition's position should be updated or not
-			true // whether the physics definition's rotation should be updated or not
+      true // whether the physics definition's rotation should be updated or not
       );
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -29,6 +29,7 @@ loader.reset();
 in between.
 For debugging, you can also call 
 ```java
-loader.loadDebug(pContext, pPhysicsWorld, pScene, pAssetBasePath, pAssetPath, pShape, pUpdatePosition, pUpdateRotation, pVertexBufferObjectManager)
+loader.loadDebug(pContext, pPhysicsWorld, pScene, pAssetBasePath, pAssetPath, 
+     pShape, pUpdatePosition, pUpdateRotation, pVertexBufferObjectManager)
 ```
 to see into which triangles your definition is separated.
