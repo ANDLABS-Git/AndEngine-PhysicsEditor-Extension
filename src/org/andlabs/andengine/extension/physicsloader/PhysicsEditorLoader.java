@@ -1,0 +1,471 @@
+package org.andlabs.andengine.extension.physicsloader;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.andengine.entity.primitive.Line;
+import org.andengine.entity.scene.Scene;
+import org.andengine.entity.shape.IAreaShape;
+import org.andengine.entity.sprite.AnimatedSprite;
+import org.andengine.extension.physics.box2d.PhysicsConnector;
+import org.andengine.extension.physics.box2d.PhysicsFactory;
+import org.andengine.extension.physics.box2d.PhysicsWorld;
+import org.andengine.extension.physics.box2d.util.constants.PhysicsConstants;
+import org.andengine.opengl.vbo.VertexBufferObjectManager;
+import org.andengine.util.SAXUtils;
+import org.andengine.util.level.LevelLoader;
+import org.xml.sax.Attributes;
+
+import android.content.Context;
+import android.util.Log;
+
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.physics.box2d.Body;
+import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
+import com.badlogic.gdx.physics.box2d.FixtureDef;
+import com.badlogic.gdx.physics.box2d.PolygonShape;
+
+/**
+ * @author johannesborchardt
+ */
+public class PhysicsEditorLoader extends LevelLoader implements
+		LoaderConstants, PhysicsConstants {
+
+	private final String TAG = "PhysicsEditorLevelLoader";
+
+	// Bodies
+	private List<Body> mBodies;
+
+	private Body mBody;
+
+	// Fixtures
+	private List<FixtureDef> mFixtureDefs;
+
+	private FixtureDef mFixtureDef;
+
+	// Polygons
+	private List<List<List<Vector2>>> mSepPolygons;
+
+	private List<List<Vector2>> mPolygons;
+
+	private List<Vector2> mPolygon;
+
+	// Else
+	private PhysicsWorld mPhysicsWorld;
+
+	private IAreaShape mShape;
+
+	private BodyType mBodyType;
+
+	private boolean mUpdateRotation;
+
+	private boolean mUpdatePosition;
+
+	private EntityLoader mLoader;
+
+	private Scene mScene;
+
+	private BodyChangedListener mBodyChangedListener;
+
+	private boolean mDebug = false;
+
+	private VertexBufferObjectManager mVertexBufferObjectManager;
+
+	public void reset() {
+		if (mLoader != null) {
+			mLoader.reset();
+		}
+	}
+
+	/**
+	 * Loads a XML of the PhysicsEditor (http://www.physicseditor.de) AndEngine
+	 * XML format.
+	 * 
+	 * @param pContext
+	 *            the {@link Context} of the BaseGameActivity
+	 * @param pPhysicsWorld
+	 *            the {@link PhysicsWorld} to which the {@link Body}s will be
+	 *            attached
+	 * @param pScene
+	 *            the {@link Scene} on which everything will be drawn
+	 * @param pAssetBasePath
+	 *            the base path of the assets (e.g. "level")
+	 * @param pAssetPath
+	 *            the name of the level in the base path plus its path (e.g.
+	 *            "level.xml")
+	 * @param pShape
+	 *            the {@link IAreaShape} the first body in your XML should be
+	 *            attached to (e.g. an {@link AnimatedSprite})
+	 * @param pUpdatePosition
+	 *            whether the {@link Body}'s position should be updated
+	 * @param pUpdateRotation
+	 *            whether the {@link Body}'s rotation should be updated
+	 * @throws IOException
+	 */
+	public boolean load(final Context pContext,
+			final PhysicsWorld pPhysicsWorld, final String pAssetBasePath,
+			final String pAssetPath, final IAreaShape pShape,
+			final boolean pUpdatePosition, final boolean pUpdateRotation)
+			throws IOException {
+		return load(pContext, pPhysicsWorld, null, pAssetBasePath, pAssetPath,
+				pShape, pUpdatePosition, pUpdateRotation, false, null);
+	}
+
+	/**
+	 * Loads a XML of the PhysicsEditor (http://www.physicseditor.de) AndEngine
+	 * XML format. Call this method if you want the polygon shapes of your XML
+	 * to be drawn on your screen. Note: This will most likely cause a garbage
+	 * collection!
+	 * 
+	 * @param pContext
+	 *            the {@link Context} of the BaseGameActivity
+	 * @param pPhysicsWorld
+	 *            the {@link PhysicsWorld} to which the {@link Body}s will be
+	 *            attached
+	 * @param pScene
+	 *            the {@link Scene} on which everything will be drawn
+	 * @param pAssetBasePath
+	 *            the base path of the assets (e.g. "level")
+	 * @param pAssetPath
+	 *            the name of the level in the base path plus its path (e.g.
+	 *            "level.xml")
+	 * @param pShape
+	 *            the {@link IAreaShape} the first body in your XML should be
+	 *            attached to (e.g. an {@link AnimatedSprite})
+	 * @param pUpdatePosition
+	 *            whether the {@link Body}'s position should be updated
+	 * @param pUpdateRotation
+	 *            whether the {@link Body}'s rotation should be updated
+	 * @throws IOException
+	 */
+	public boolean loadDebug(final Context pContext,
+			final PhysicsWorld pPhysicsWorld, final Scene pScene,
+			final String pAssetBasePath, final String pAssetPath,
+			final IAreaShape pShape, final boolean pUpdatePosition,
+			final boolean pUpdateRotation,
+			final VertexBufferObjectManager pVertexBufferObjectManager)
+			throws IOException {
+		return load(pContext, pPhysicsWorld, pScene, pAssetBasePath,
+				pAssetPath, pShape, pUpdatePosition, pUpdateRotation, true,
+				pVertexBufferObjectManager);
+	}
+
+	/**
+	 * Loads a XML of the PhysicsEditor (http://www.physicseditor.de) AndEngine
+	 * XML format.
+	 * 
+	 * @param pContext
+	 *            the {@link Context} of the BaseGameActivity
+	 * @param pPhysicsWorld
+	 *            the {@link PhysicsWorld} to which the {@link Body}s will be
+	 *            attached
+	 * @param pScene
+	 *            the {@link Scene} on which everything will be drawn
+	 * @param pAssetBasePath
+	 *            the base path of the assets (e.g. "level")
+	 * @param pAssetPath
+	 *            the name of the level in the base path plus it's path (e.g.
+	 *            "level.xml")
+	 * @param pShape
+	 *            the {@link IAreaShape} the first body in your XML should be
+	 *            attached to (e.g. an {@link AnimatedSprite})
+	 * @param pUpdatePosition
+	 *            whether the {@link Body}'s position should be updated
+	 * @param pUpdateRotation
+	 *            whether the {@link Body}'s rotation should be updated
+	 * @param pDebug
+	 *            whether the level should be debugged or not. When set to true,
+	 *            the body's shapes will be drawn. Note: This will most likely
+	 *            cause a garbage collection!
+	 * @throws IOException
+	 */
+	private boolean load(final Context pContext,
+			final PhysicsWorld pPhysicsWorld, final Scene pScene,
+			final String pAssetBasePath, final String pAssetPath,
+			final IAreaShape pShape, final boolean pUpdatePosition,
+			final boolean pUpdateRotation, final boolean pDebug,
+			final VertexBufferObjectManager pVertexManager) throws IOException {
+
+		this.mPhysicsWorld = pPhysicsWorld;
+		this.mShape = pShape;
+		this.mUpdatePosition = pUpdatePosition;
+		this.mUpdateRotation = pUpdateRotation;
+		this.mScene = pScene;
+		this.mDebug = pDebug;
+		this.mVertexBufferObjectManager = pVertexManager;
+
+		try {
+			mLoader = new EntityLoader();
+
+			this.registerEntityLoader(TAG_BODIES, mLoader);
+			this.registerEntityLoader(TAG_BODY, mLoader);
+			this.registerEntityLoader(TAG_FIXTURE, mLoader);
+			this.registerEntityLoader(TAG_POLYGON, mLoader);
+			this.registerEntityLoader("vertex", mLoader);
+			this.registerEntityLoader("bodydef", mLoader);
+			this.registerEntityLoader("metadata", mLoader);
+			this.registerEntityLoader("format", mLoader);
+			this.registerEntityLoader("ptm_ratio", mLoader);
+
+			loadLevelFromAsset(pContext, pAssetBasePath, pAssetPath);
+
+		} catch (RuntimeException e) {
+			Log.w(TAG, "Something with the XML-Parsing went wrong", e);
+			return false;
+		}
+
+		return true;
+	}
+
+	public List<Body> getBodies() {
+		return mBodies;
+	}
+
+	@Override
+	protected void onAfterLoadLevel() {
+		super.onAfterLoadLevel();
+
+		mLoader.onAfterLoad();
+	}
+
+	private void loadLevelFromAsset(final Context pContext,
+			final String pAssetBasePath, final String pAssetPath)
+			throws IOException {
+		loadLevelFromStream(pContext.getAssets().open(
+				pAssetBasePath + pAssetPath));
+	}
+
+	private class EntityLoader implements IEntityLoader {
+		private String mBodyName;
+		private Vector2 mVertex;
+
+		public EntityLoader() {
+			mSepPolygons = new ArrayList<List<List<Vector2>>>();
+			mPolygons = new ArrayList<List<Vector2>>();
+			mBodies = new ArrayList<Body>();
+		}
+
+		public void onAfterLoad() {
+			addLastPoly();
+			addLastPolys();
+			addLastBody();
+		}
+
+		private void addLastPoly() {
+			if (mPolygons != null && mPolygon != null) {
+				mPolygons.add(mPolygon);
+			}
+		}
+
+		private void addLastPolys() {
+			if (mSepPolygons != null && mPolygons != null) {
+				mSepPolygons.add(mPolygons);
+				mPolygons = new ArrayList<List<Vector2>>();
+			}
+		}
+
+		private void addLastBody() {
+			Vector2[] polygon = (Vector2[]) mSepPolygons.get(0).get(0)
+					.toArray(new Vector2[mSepPolygons.get(0).get(0).size()]);
+
+			if (mBodyChangedListener != null) {
+				mShape = mBodyChangedListener.onBodyChanged(mBodyName);
+			}
+
+			mBody = PhysicsFactory.createPolygonBody(mPhysicsWorld, mShape,
+					polygon, mBodyType, mFixtureDefs.get(0));
+			mBody.setUserData(mBodyName);
+
+			final PolygonShape polyShape = new PolygonShape();
+
+			// <debugging>
+			Line line;
+			Vector2 lastVertice = null;
+			// </debugging>
+
+			for (int e = 0; e < mSepPolygons.size() && e < mFixtureDefs.size(); e++) {
+				mPolygons = mSepPolygons.get(e);
+				for (int i = 0; i < mPolygons.size(); i++) {
+					// The polygon (an array of vertices)
+					polygon = (Vector2[]) mPolygons.get(i).toArray(
+							new Vector2[mPolygons.get(i).size()]);
+					polyShape.set(polygon);
+
+					// fixture
+					mFixtureDefs.get(e).shape = polyShape;
+					mBody.createFixture(mFixtureDefs.get(e));
+
+					// <debugging>
+					if (mDebug) {
+						for (int g = 0; g < polygon.length; g++) {
+							if (lastVertice != null) {
+								// if (LOG) {
+								// Log.d(TAG, "drawing line at "
+								// + lastVertice.x + ", "
+								// + lastVertice.y + ", "
+								// + polygon[g].x + ", "
+								// + polygon[g].y);
+								// }
+								line = new Line(
+										mShape.getX()
+												+ lastVertice.x
+												* PhysicsConstants.PIXEL_TO_METER_RATIO_DEFAULT
+												+ mShape.getWidth() / 2,
+										mShape.getY()
+												+ lastVertice.y
+												* PhysicsConstants.PIXEL_TO_METER_RATIO_DEFAULT
+												+ mShape.getHeight() / 2,
+										mShape.getX()
+												+ polygon[g].x
+												* PhysicsConstants.PIXEL_TO_METER_RATIO_DEFAULT
+												+ mShape.getWidth() / 2,
+										mShape.getY()
+												+ polygon[g].y
+												* PhysicsConstants.PIXEL_TO_METER_RATIO_DEFAULT
+												+ mShape.getHeight() / 2, 4,
+										mVertexBufferObjectManager);
+								mScene.attachChild(line);
+							}
+							lastVertice = polygon[g];
+							if (g == polygon.length - 1) {
+								lastVertice = null;
+							}
+						}
+					}
+					// </debugging>
+
+				}
+			}
+
+			polyShape.dispose();
+			mShape.setZIndex(0);
+
+			mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(mShape,
+					mBody, mUpdatePosition, mUpdateRotation));
+
+			mBodies.add(mBody);
+		}
+
+		@Override
+		public void onLoadEntity(String pEntityName, Attributes pAttributes) {
+			if (pEntityName.equals(TAG_FIXTURE)) {
+				addLastPoly();
+				if (mPolygons.size() > 0) {
+					addLastPolys();
+				}
+
+				try {
+					final float density = SAXUtils.getFloatAttributeOrThrow(
+							pAttributes, TAG_DENSITY);
+					final float elasticity = SAXUtils.getFloatAttributeOrThrow(
+							pAttributes, TAG_RESTITUTION);
+					final float friction = SAXUtils.getFloatAttributeOrThrow(
+							pAttributes, TAG_FRICTION);
+					final boolean sensor = SAXUtils.getBooleanAttributeOrThrow(
+							pAttributes, "isSensor");
+					final short categoryBits = SAXUtils
+							.getShortAttributeOrThrow(pAttributes,
+									"filter_categoryBits");
+					final short maskBits = SAXUtils.getShortAttributeOrThrow(
+							pAttributes, "filter_maskBits");
+					final short groupIndex = SAXUtils.getShortAttributeOrThrow(
+							pAttributes, "filter_groupIndex");
+
+					if (LOG) {
+						Log.d(TAG, "density = " + density + ", elasticity = "
+								+ elasticity + ", Friction = " + friction
+								+ ", isSensor = " + sensor
+								+ ", categoryBits = " + categoryBits
+								+ ", maskBits = " + maskBits
+								+ ", groupIndex = " + groupIndex);
+					}
+					mFixtureDef = PhysicsFactory.createFixtureDef(density,
+							elasticity, friction, sensor, categoryBits,
+							maskBits, groupIndex);
+					mFixtureDefs.add(mFixtureDef);
+				} catch (NumberFormatException e) {
+					throw new NumberFormatException(
+							"Error while parsing numbers. You probably provided too many category or mask bits in your XML.");
+				}
+			} else if (pEntityName.equals(TAG_POLYGON)) {
+				addLastPoly();
+
+				mPolygon = new ArrayList<Vector2>();
+			} else if (pEntityName.equals("vertex")) {
+
+				final float x = SAXUtils.getFloatAttributeOrThrow(pAttributes,
+						"x");
+				final float y = SAXUtils.getFloatAttributeOrThrow(pAttributes,
+						"y");
+				mVertex = new Vector2(x
+						/ PhysicsConstants.PIXEL_TO_METER_RATIO_DEFAULT, y
+						/ PhysicsConstants.PIXEL_TO_METER_RATIO_DEFAULT);
+
+				mPolygon.add(mVertex);
+			}
+
+			if (pEntityName.equals(TAG_BODIES)) {
+				mBodies = new ArrayList<Body>();
+			} else if (pEntityName.equals(TAG_BODY)) {
+				if (mSepPolygons.size() > 0) {
+					onAfterLoad();
+				}
+				mBodyName = SAXUtils.getAttributeOrThrow(pAttributes, "name");
+				final boolean isDynamic = SAXUtils.getBooleanAttributeOrThrow(
+						pAttributes, "dynamic");
+				// TODO: Kinematic bodies are not supported by the PhysicsEditor
+				// output format yet.
+				if (isDynamic) {
+					mBodyType = BodyType.DynamicBody;
+				} else {
+					mBodyType = BodyType.StaticBody;
+				}
+				mFixtureDefs = new ArrayList<FixtureDef>();
+
+			} else {
+				// everything else is ignored (metadata like ptm_ratio).
+			}
+		}
+
+		public void reset() {
+			mBodies = null;
+			mBody = null;
+			mFixtureDefs = null;
+			mFixtureDef = null;
+			mSepPolygons = null;
+			mPolygons = null;
+			mPolygon = null;
+			mPhysicsWorld = null;
+			mShape = null;
+			mScene = null;
+		}
+	}
+
+	/**
+	 * Call to register an {@link BodyChangedListener}.
+	 * 
+	 * @param pBodyChangedListener
+	 */
+	public void setBodyChangedListener(
+			final BodyChangedListener pBodyChangedListener) {
+		this.mBodyChangedListener = pBodyChangedListener;
+	}
+
+	/**
+	 * If your XML contains more than one body, you can implement and set this
+	 * interface in order to provide new ISHapes for every different body.
+	 * 
+	 * @author johannesborchardt
+	 */
+	public interface BodyChangedListener {
+		/**
+		 * Called when a new body was detected in the XML.
+		 * 
+		 * @param pBodyName
+		 *            the name of the body provided in the XML.
+		 * @return the shape you want this body to be attached to.
+		 */
+		public IAreaShape onBodyChanged(final String pBodyName);
+	}
+}
