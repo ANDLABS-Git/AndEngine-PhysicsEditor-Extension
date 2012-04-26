@@ -8,6 +8,7 @@ public interface LoaderConstants {
     public static boolean LOG = true;
     public static String TAG_BODIES = "bodies";
     public static String TAG_BODY = "body";
+    public static String TAG_BODYDEF = "bodydef";
     public static String TAG_FIXTURES = "fixtures";
     public static String TAG_FIXTURE = "fixture";
     public static String TAG_DENSITY = "density";
@@ -22,4 +23,6 @@ public interface LoaderConstants {
     public static String TAG_METADATA = "metadata";
     public static String TAG_FORMAT = "format";
     public static String TAG_PTM_RATIO = "ptm_ratio";
+    public static String TAG_VERTEX = "vertex";
+
 }

@@ -32,7 +32,7 @@ import com.badlogic.gdx.physics.box2d.PolygonShape;
 public class PhysicsEditorLoader extends LevelLoader implements
 		LoaderConstants, PhysicsConstants {
 
-	private final String TAG = "PhysicsEditorLevelLoader";
+	private final String TAG = "PhysicsEditorLoader";
 
 	// Bodies
 	private List<Body> mBodies;
@@ -104,12 +104,11 @@ public class PhysicsEditorLoader extends LevelLoader implements
 	 * @throws IOException
 	 */
 	public boolean load(final Context pContext,
-			final PhysicsWorld pPhysicsWorld, final String pAssetBasePath,
-			final String pAssetPath, final IAreaShape pShape,
-			final boolean pUpdatePosition, final boolean pUpdateRotation)
-			throws IOException {
-		return load(pContext, pPhysicsWorld, null, pAssetBasePath, pAssetPath,
-				pShape, pUpdatePosition, pUpdateRotation, false, null);
+			final PhysicsWorld pPhysicsWorld, final String pAssetPath,
+			final IAreaShape pShape, final boolean pUpdatePosition,
+			final boolean pUpdateRotation) throws IOException {
+		return load(pContext, pPhysicsWorld, null, pAssetPath, pShape,
+				pUpdatePosition, pUpdateRotation, false, null);
 	}
 
 	/**
@@ -141,13 +140,12 @@ public class PhysicsEditorLoader extends LevelLoader implements
 	 */
 	public boolean loadDebug(final Context pContext,
 			final PhysicsWorld pPhysicsWorld, final Scene pScene,
-			final String pAssetBasePath, final String pAssetPath,
-			final IAreaShape pShape, final boolean pUpdatePosition,
-			final boolean pUpdateRotation,
+			final String pAssetPath, final IAreaShape pShape,
+			final boolean pUpdatePosition, final boolean pUpdateRotation,
 			final VertexBufferObjectManager pVertexBufferObjectManager)
 			throws IOException {
-		return load(pContext, pPhysicsWorld, pScene, pAssetBasePath,
-				pAssetPath, pShape, pUpdatePosition, pUpdateRotation, true,
+		return load(pContext, pPhysicsWorld, pScene, pAssetPath, pShape,
+				pUpdatePosition, pUpdateRotation, true,
 				pVertexBufferObjectManager);
 	}
 
@@ -182,10 +180,10 @@ public class PhysicsEditorLoader extends LevelLoader implements
 	 */
 	private boolean load(final Context pContext,
 			final PhysicsWorld pPhysicsWorld, final Scene pScene,
-			final String pAssetBasePath, final String pAssetPath,
-			final IAreaShape pShape, final boolean pUpdatePosition,
-			final boolean pUpdateRotation, final boolean pDebug,
-			final VertexBufferObjectManager pVertexManager) throws IOException {
+			final String pAssetPath, final IAreaShape pShape,
+			final boolean pUpdatePosition, final boolean pUpdateRotation,
+			final boolean pDebug, final VertexBufferObjectManager pVertexManager)
+			throws IOException {
 
 		this.mPhysicsWorld = pPhysicsWorld;
 		this.mShape = pShape;
@@ -202,13 +200,13 @@ public class PhysicsEditorLoader extends LevelLoader implements
 			this.registerEntityLoader(TAG_BODY, mLoader);
 			this.registerEntityLoader(TAG_FIXTURE, mLoader);
 			this.registerEntityLoader(TAG_POLYGON, mLoader);
-			this.registerEntityLoader("vertex", mLoader);
-			this.registerEntityLoader("bodydef", mLoader);
-			this.registerEntityLoader("metadata", mLoader);
-			this.registerEntityLoader("format", mLoader);
-			this.registerEntityLoader("ptm_ratio", mLoader);
+			this.registerEntityLoader(TAG_VERTEX, mLoader);
+			this.registerEntityLoader(TAG_BODYDEF, mLoader);
+			this.registerEntityLoader(TAG_METADATA, mLoader);
+			this.registerEntityLoader(TAG_FORMAT, mLoader);
+			this.registerEntityLoader(TAG_PTM_RATIO, mLoader);
 
-			loadLevelFromAsset(pContext, pAssetBasePath, pAssetPath);
+			loadLevelFromAsset(pContext, pAssetPath);
 
 		} catch (RuntimeException e) {
 			Log.w(TAG, "Something with the XML-Parsing went wrong", e);
@@ -218,22 +216,21 @@ public class PhysicsEditorLoader extends LevelLoader implements
 		return true;
 	}
 
-	public List<Body> getBodies() {
-		return mBodies;
-	}
+	/**
+	 * Set the base path to your assets. Once set, this will be the base path as
+	 * long as this instance exists.
+	 */
+	@Override
+	public void setAssetBasePath(String pAssetBasePath) {
+		// Only overridden to add the comment
+		super.setAssetBasePath(pAssetBasePath);
+	};
 
 	@Override
 	protected void onAfterLoadLevel() {
 		super.onAfterLoadLevel();
 
 		mLoader.onAfterLoad();
-	}
-
-	private void loadLevelFromAsset(final Context pContext,
-			final String pAssetBasePath, final String pAssetPath)
-			throws IOException {
-		loadLevelFromStream(pContext.getAssets().open(
-				pAssetBasePath + pAssetPath));
 	}
 
 	private class EntityLoader implements IEntityLoader {
@@ -364,13 +361,14 @@ public class PhysicsEditorLoader extends LevelLoader implements
 							pAttributes, TAG_FRICTION);
 					final boolean sensor = SAXUtils.getBooleanAttributeOrThrow(
 							pAttributes, "isSensor");
-					final short categoryBits = SAXUtils
-							.getShortAttributeOrThrow(pAttributes,
-									"filter_categoryBits");
-					final short maskBits = SAXUtils.getShortAttributeOrThrow(
-							pAttributes, "filter_maskBits");
-					final short groupIndex = SAXUtils.getShortAttributeOrThrow(
-							pAttributes, "filter_groupIndex");
+					final short categoryBits = parseShort(SAXUtils
+							.getAttributeOrThrow(pAttributes,
+									"filter_categoryBits"));
+					final short maskBits = parseShort(SAXUtils
+							.getAttributeOrThrow(pAttributes, "filter_maskBits"));
+					final short groupIndex = parseShort(SAXUtils
+							.getAttributeOrThrow(pAttributes,
+									"filter_groupIndex"));
 
 					if (LOG) {
 						Log.d(TAG, "density = " + density + ", elasticity = "
@@ -440,6 +438,34 @@ public class PhysicsEditorLoader extends LevelLoader implements
 			mShape = null;
 			mScene = null;
 		}
+
+		private short parseShort(String val) {
+			Integer intVal = Integer.parseInt(val);
+			return intVal.shortValue();
+		}
+	}
+
+	/**
+	 * @return all the bodies held by this instance
+	 */
+	public List<Body> getBodies() {
+		return mBodies;
+	}
+
+	/**
+	 * Get one specific {@link Body} by its name
+	 * 
+	 * @param pName
+	 *            the name of the body as you specified it in the PhysicsEditor
+	 * @return the {@link Body} or if nothing was found
+	 */
+	public Body getBody(final String pName) {
+		for (final Body body : mBodies) {
+			if (body.getUserData().equals(pName)) {
+				return body;
+			}
+		}
+		return null;
 	}
 
 	/**
