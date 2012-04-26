@@ -33,3 +33,5 @@ loader.loadDebug(pContext, pPhysicsWorld, pScene, pAssetBasePath, pAssetPath,
      pShape, pUpdatePosition, pUpdateRotation, pVertexBufferObjectManager)
 ```
 to see into which triangles your definition is separated.
+
+You also might want to take a look at the examples: https://github.com/ANDLABS-Git/AndEngine-PhysicsEditor-Extension-Examples
