@@ -257,9 +257,9 @@ public class PhysicsEditorLoader extends LevelLoader implements
 		private void addLastPoly() {
 			if (mShapes != null && mPolygon != null) {
 				final PolygonShape polyShape = new PolygonShape();
-				
-				polyShape.set((Vector2[]) mPolygon.toArray(
-						new Vector2[mPolygon.size()]));
+
+				polyShape.set((Vector2[]) mPolygon.toArray(new Vector2[mPolygon
+						.size()]));
 				mShapes.add(polyShape);
 			}
 		}
@@ -279,64 +279,73 @@ public class PhysicsEditorLoader extends LevelLoader implements
 			final BodyDef boxBodyDef = new BodyDef();
 			boxBodyDef.type = mBodyType;
 
-			final float[] sceneCenterCoordinates = mAreaShape.getSceneCenterCoordinates();
-			boxBodyDef.position.x = sceneCenterCoordinates[Constants.VERTEX_INDEX_X] / PIXEL_TO_METER_RATIO_DEFAULT;
-			boxBodyDef.position.y = sceneCenterCoordinates[Constants.VERTEX_INDEX_Y] / PIXEL_TO_METER_RATIO_DEFAULT;
+			final float[] sceneCenterCoordinates = mAreaShape
+					.getSceneCenterCoordinates();
+			boxBodyDef.position.x = sceneCenterCoordinates[Constants.VERTEX_INDEX_X]
+					/ PIXEL_TO_METER_RATIO_DEFAULT;
+			boxBodyDef.position.y = sceneCenterCoordinates[Constants.VERTEX_INDEX_Y]
+					/ PIXEL_TO_METER_RATIO_DEFAULT;
 
 			mBody = mPhysicsWorld.createBody(boxBodyDef);
-		
+
 			mBody.setUserData(mBodyName);
 
-//			// <debugging>
-//			Line line;
-//			Vector2 lastVertice = null;
-//			// </debugging>
+			// <debugging>
+			Line line;
+			Vector2 lastVertex = null;
+			// </debugging>
 
 			for (int e = 0; e < mSepPolygons.size() && e < mFixtureDefs.size(); e++) {
 				mShapes = mSepPolygons.get(e);
 				for (int i = 0; i < mShapes.size(); i++) {
+					final Shape shape = mShapes.get(i);
 					// fixture
-					mFixtureDefs.get(e).shape = mSepPolygons.get(e).get(i);
+					mFixtureDefs.get(e).shape = shape;
 					mBody.createFixture(mFixtureDefs.get(e));
 
 					mSepPolygons.get(e).get(i).dispose();
 					// <debugging>
-//					if (mDebug) {
-//						for (int g = 0; g < polygon.length; g++) {
-//							if (lastVertice != null) {
-//								// if (LOG) {
-//								// Log.d(TAG, "drawing line at "
-//								// + lastVertice.x + ", "
-//								// + lastVertice.y + ", "
-//								// + polygon[g].x + ", "
-//								// + polygon[g].y);
-//								// }
-//								line = new Line(
-//										mShape.getX()
-//												+ lastVertice.x
-//												* PhysicsConstants.PIXEL_TO_METER_RATIO_DEFAULT
-//												+ mShape.getWidth() / 2,
-//										mShape.getY()
-//												+ lastVertice.y
-//												* PhysicsConstants.PIXEL_TO_METER_RATIO_DEFAULT
-//												+ mShape.getHeight() / 2,
-//										mShape.getX()
-//												+ polygon[g].x
-//												* PhysicsConstants.PIXEL_TO_METER_RATIO_DEFAULT
-//												+ mShape.getWidth() / 2,
-//										mShape.getY()
-//												+ polygon[g].y
-//												* PhysicsConstants.PIXEL_TO_METER_RATIO_DEFAULT
-//												+ mShape.getHeight() / 2, 4,
-//										mVertexBufferObjectManager);
-//								mScene.attachChild(line);
-//							}
-//							lastVertice = polygon[g];
-//							if (g == polygon.length - 1) {
-//								lastVertice = null;
-//							}
-//						}
-//					}
+					if (mDebug) {
+						if (shape instanceof PolygonShape) {
+
+							for (int g = 0; g < ((PolygonShape) shape)
+									.getVertexCount(); g++) {
+								Vector2 vertex = new Vector2();
+
+								if (lastVertex != null) {
+									((PolygonShape) shape).getVertex(g, vertex);
+									line = new Line(
+											vertex.x
+													+ lastVertex.x
+													* PhysicsConstants.PIXEL_TO_METER_RATIO_DEFAULT
+													+ mAreaShape.getWidth() / 2,
+											mAreaShape.getY()
+													+ lastVertex.y
+													* PhysicsConstants.PIXEL_TO_METER_RATIO_DEFAULT
+													+ mAreaShape.getHeight()
+													/ 2,
+											mAreaShape.getX()
+													+ vertex.x
+													* PhysicsConstants.PIXEL_TO_METER_RATIO_DEFAULT
+													+ mAreaShape.getWidth() / 2,
+											mAreaShape.getY()
+													+ vertex.y
+													* PhysicsConstants.PIXEL_TO_METER_RATIO_DEFAULT
+													+ mAreaShape.getHeight()
+													/ 2, 4,
+											mVertexBufferObjectManager);
+									mScene.attachChild(line);
+								}
+								lastVertex = vertex;
+								if (g == ((PolygonShape) shape)
+										.getVertexCount() - 1) {
+									lastVertex = null;
+								}
+							}
+						} else if (shape instanceof CircleShape) {
+							//TODO: Draw circle. There is no circle class available yet though.
+						}
+					}
 					// </debugging>
 
 				}
@@ -344,8 +353,8 @@ public class PhysicsEditorLoader extends LevelLoader implements
 
 			mAreaShape.setZIndex(0);
 
-			mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(mAreaShape,
-					mBody, mUpdatePosition, mUpdateRotation));
+			mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(
+					mAreaShape, mBody, mUpdatePosition, mUpdateRotation));
 
 			mBodies.add(mBody);
 		}
@@ -401,8 +410,7 @@ public class PhysicsEditorLoader extends LevelLoader implements
 						"x");
 				final float y = SAXUtils.getFloatAttributeOrThrow(pAttributes,
 						"y");
-				mVertex = new Vector2(x
-						/ PIXEL_TO_METER_RATIO_DEFAULT, y
+				mVertex = new Vector2(x / PIXEL_TO_METER_RATIO_DEFAULT, y
 						/ PIXEL_TO_METER_RATIO_DEFAULT);
 
 				mPolygon.add(mVertex);
@@ -411,13 +419,13 @@ public class PhysicsEditorLoader extends LevelLoader implements
 						"x") / PIXEL_TO_METER_RATIO_DEFAULT;
 				final float y = SAXUtils.getFloatAttributeOrThrow(pAttributes,
 						"y") / PIXEL_TO_METER_RATIO_DEFAULT;
-				final float radius = SAXUtils.getFloatAttributeOrThrow(pAttributes,
-						"r")  / PIXEL_TO_METER_RATIO_DEFAULT;
-						
+				final float radius = SAXUtils.getFloatAttributeOrThrow(
+						pAttributes, "r") / PIXEL_TO_METER_RATIO_DEFAULT;
+
 				final CircleShape circlePoly = new CircleShape();
 				circlePoly.setPosition(new Vector2(x, y));
 				circlePoly.setRadius(radius);
-				
+
 				mShapes.add(circlePoly);
 			} else if (pEntityName.equals(TAG_BODIES)) {
 				mBodies = new ArrayList<Body>();
