@@ -24,5 +24,6 @@ public interface LoaderConstants {
     public static String TAG_FORMAT = "format";
     public static String TAG_PTM_RATIO = "ptm_ratio";
     public static String TAG_VERTEX = "vertex";
+    public static String TAG_CIRCLE = "circle";
 
 }
