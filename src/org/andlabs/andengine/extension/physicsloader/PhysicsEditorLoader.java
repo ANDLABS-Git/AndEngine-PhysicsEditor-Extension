@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.andengine.entity.IEntity;
 import org.andengine.entity.primitive.Line;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.shape.IAreaShape;
@@ -15,6 +16,7 @@ import org.andengine.extension.physics.box2d.util.constants.PhysicsConstants;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.util.Constants;
 import org.andengine.util.SAXUtils;
+import org.andengine.util.level.IEntityLoader;
 import org.andengine.util.level.LevelLoader;
 import org.xml.sax.Attributes;
 
@@ -200,18 +202,12 @@ public class PhysicsEditorLoader extends LevelLoader implements
 		try {
 			mLoader = new EntityLoader();
 
-			this.registerEntityLoader(TAG_BODIES, mLoader);
-			this.registerEntityLoader(TAG_BODY, mLoader);
-			this.registerEntityLoader(TAG_FIXTURE, mLoader);
-			this.registerEntityLoader(TAG_POLYGON, mLoader);
-			this.registerEntityLoader(TAG_VERTEX, mLoader);
-			this.registerEntityLoader(TAG_BODYDEF, mLoader);
-			this.registerEntityLoader(TAG_METADATA, mLoader);
-			this.registerEntityLoader(TAG_FORMAT, mLoader);
-			this.registerEntityLoader(TAG_PTM_RATIO, mLoader);
-			this.registerEntityLoader(TAG_CIRCLE, mLoader);
+			this.registerEntityLoader(new String[] { TAG_BODIES, TAG_BODY,
+					TAG_FIXTURE, TAG_POLYGON, TAG_VERTEX, TAG_BODYDEF,
+					TAG_METADATA, TAG_FORMAT, TAG_PTM_RATIO, TAG_CIRCLE },
+					mLoader);
 
-			loadLevelFromAsset(pContext, pAssetPath);
+			loadLevelFromAsset(pContext.getAssets(), pAssetPath);
 
 		} catch (RuntimeException e) {
 			Log.w(TAG, "Something with the XML-Parsing went wrong", e);
@@ -241,11 +237,13 @@ public class PhysicsEditorLoader extends LevelLoader implements
 	private class EntityLoader implements IEntityLoader {
 		private String mBodyName;
 		private Vector2 mVertex;
+		private IEntity mReturnEntity;
 
 		public EntityLoader() {
 			mSepPolygons = new ArrayList<List<Shape>>();
 			mShapes = new ArrayList<Shape>();
 			mBodies = new ArrayList<Body>();
+			mReturnEntity = mAreaShape;
 		}
 
 		public void onAfterLoad() {
@@ -274,6 +272,7 @@ public class PhysicsEditorLoader extends LevelLoader implements
 		private void addLastBody() {
 			if (mBodyChangedListener != null) {
 				mAreaShape = mBodyChangedListener.onBodyChanged(mBodyName);
+				mReturnEntity = mAreaShape;
 			}
 
 			final BodyDef boxBodyDef = new BodyDef();
@@ -343,7 +342,8 @@ public class PhysicsEditorLoader extends LevelLoader implements
 								}
 							}
 						} else if (shape instanceof CircleShape) {
-							//TODO: Draw circle. There is no circle class available yet though.
+							// TODO: Draw circle. There is no circle class
+							// available yet though.
 						}
 					}
 					// </debugging>
@@ -360,7 +360,7 @@ public class PhysicsEditorLoader extends LevelLoader implements
 		}
 
 		@Override
-		public void onLoadEntity(String pEntityName, Attributes pAttributes) {
+		public IEntity onLoadEntity(String pEntityName, Attributes pAttributes) {
 			if (pEntityName.equals(TAG_FIXTURE)) {
 				addLastPoly();
 				if (mShapes.size() > 0) {
@@ -447,6 +447,13 @@ public class PhysicsEditorLoader extends LevelLoader implements
 
 			} else {
 				// everything else is ignored (metadata like ptm_ratio).
+			}
+
+			// Make sure we return every provided AreaShape only once.
+			try {
+				return mReturnEntity;
+			} finally {
+				mReturnEntity = null;
 			}
 		}
 
